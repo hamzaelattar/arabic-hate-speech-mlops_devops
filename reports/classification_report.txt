@@ -1,0 +1,10 @@
+              precision    recall  f1-score   support
+
+      gender       0.48      0.88      0.62        82
+      origin       0.51      0.71      0.59       131
+       other       0.72      0.41      0.52       266
+    religion       0.19      0.14      0.16        22
+
+    accuracy                           0.55       501
+   macro avg       0.47      0.53      0.47       501
+weighted avg       0.60      0.55      0.54       501
