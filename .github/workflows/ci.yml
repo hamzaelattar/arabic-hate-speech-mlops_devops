@@ -204,6 +204,26 @@ jobs:
           print("API prediction successful:", result)
           PY
 
+      # ==========================================
+      # EXPORT VALIDATED DOCKER IMAGE
+      # ==========================================
+      - name: Export validated Docker image
+        run: |
+          docker save \
+            arabic-hate-speech-api:${{ github.sha }} \
+            -o docker-image.tar
+
+      - name: Upload validated Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: validated-docker-image
+          path: docker-image.tar
+          if-no-files-found: error
+          retention-days: 7
+
+      # ==========================================
+      # CLEANUP
+      # ==========================================
       - name: Show Docker logs on failure
         if: failure()
         run: docker logs hate-speech-api || true
@@ -211,4 +231,3 @@ jobs:
       - name: Stop container
         if: always()
         run: docker rm -f hate-speech-api || true
-
