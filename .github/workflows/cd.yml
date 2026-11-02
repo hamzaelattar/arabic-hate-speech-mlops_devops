@@ -1,0 +1,69 @@
+
+name: Arabic Hate Speech - CD
+
+on:
+  workflow_run:
+    workflows:
+      - "Arabic Hate Speech - CI"
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  actions: read
+  contents: read
+  packages: write
+
+jobs:
+  publish-image:
+    name: Publish Docker Image to GHCR
+    runs-on: ubuntu-latest
+
+    # Publish only successful CI runs triggered by push to main
+    if: >-
+      ${{
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.head_repository.full_name == github.repository
+      }}
+
+    steps:
+      - name: Download validated image from CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          mkdir -p docker-artifact
+
+          gh run download "$RUN_ID" \
+            --repo "${{ github.repository }}" \
+            --name validated-docker-image \
+            --dir docker-artifact
+
+      - name: Load validated Docker image
+        run: |
+          docker load -i docker-artifact/docker-image.tar
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag and push validated image
+        env:
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          IMAGE_NAME="ghcr.io/${REPOSITORY,,}"
+
+          docker tag \
+            "arabic-hate-speech-api:$SOURCE_SHA" \
+            "$IMAGE_NAME:$SOURCE_SHA"
+
+          docker push "$IMAGE_NAME:$SOURCE_SHA"
+
+          echo "Published image: $IMAGE_NAME:$SOURCE_SHA"
