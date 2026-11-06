@@ -12,3 +12,7 @@ models/*.joblib
 models/run_id.txt
 
 .env
+
+artifacts/
+arabic-model-*.zip
+logs/airflow/
