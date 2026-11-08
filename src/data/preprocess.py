@@ -1,8 +1,11 @@
 from pathlib import Path
+import argparse
 import re
 
 import emoji
 import pandas as pd
+
+from src.pipeline.paths import RAW_DIR, PROCESSED_DIR, project_path
 
 
 # Automatically locate the root when this file is at src/data/preprocess.py.
@@ -54,15 +57,27 @@ def clean_arabic(text: str) -> str:
 def preprocess_arabic(
     input_path: Path = INPUT_PATH,
     output_dir: Path = OUTPUT_DIR,
+    mode: str = "train",
 ) -> pd.DataFrame:
     """Clean Arabic tweets, remove conflicting labels and save audit files."""
-    input_path = Path(input_path)
-    output_dir = Path(output_dir)
-
-    if not input_path.is_file():
-        raise FileNotFoundError(f"Arabic dataset not found: {input_path}")
+    input_path = project_path(input_path, RAW_DIR, file=True)
+    output_dir = project_path(output_dir, PROCESSED_DIR)
+    if mode not in {"train", "evaluate"}:
+        raise ValueError("mode must be train or evaluate")
 
     data = pd.read_csv(input_path, encoding="utf-8-sig")
+    if "tweet" not in data.columns:
+        raise ValueError("Missing required column: tweet")
+    if mode == "evaluate":
+        data["tweet_clean"] = data["tweet"].fillna("").apply(clean_arabic)
+        data = data.loc[data["tweet_clean"].ne("")].copy()
+        if "target" in data.columns:
+            data["target"] = data["target"].replace({"disability": "other"})
+        output_dir.mkdir(parents=True, exist_ok=True)
+        data.to_csv(output_dir / "ar_ready.csv", index=False, encoding="utf-8-sig")
+        print(f"External rows ready: {len(data)}")
+        return data
+
     required_cols = {"tweet", *LABEL_COLS}
     missing = sorted(required_cols - set(data.columns))
     if missing:
@@ -168,7 +183,12 @@ def preprocess_arabic(
 
 
 def main():
-    preprocess_arabic()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", default=str(INPUT_PATH))
+    parser.add_argument("--output-dir", default=str(OUTPUT_DIR))
+    parser.add_argument("--mode", choices=["train", "evaluate"], default="train")
+    args = parser.parse_args()
+    preprocess_arabic(args.input, args.output_dir, args.mode)
 
 
 if __name__ == "__main__":

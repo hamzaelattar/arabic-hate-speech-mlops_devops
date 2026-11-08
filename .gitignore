@@ -38,6 +38,8 @@ mlflow.db
 models/*.joblib
 models/*.pkl
 models/*.pickle
+models/runs/
+artifacts/runs/
 
 
 logs/

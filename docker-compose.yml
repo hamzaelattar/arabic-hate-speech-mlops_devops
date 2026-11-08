@@ -5,6 +5,7 @@ x-airflow-common: &airflow-common
     dockerfile: docker/airflow/Dockerfile
   environment:
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow-api-server:8080/execution/"
 
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
 
@@ -15,6 +16,7 @@ x-airflow-common: &airflow-common
 
     PYTHONPATH: /opt/airflow/project
     MLFLOW_ALLOW_FILE_STORE: "true"
+    MLFLOW_TRACKING_URI: "file:///opt/airflow/project/mlruns"
 
   volumes:
     - ./dags:/opt/airflow/dags
@@ -54,7 +56,7 @@ services:
     <<: *airflow-common
     command: api-server
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8081:8080"
     depends_on:
       postgres:
         condition: service_healthy
